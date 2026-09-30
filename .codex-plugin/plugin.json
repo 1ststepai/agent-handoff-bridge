@@ -1,7 +1,7 @@
 {
   "name": "agent-handoff-bridge",
-  "version": "0.2.0",
-  "description": "Supervised MCP handoffs plus Codex-native STP team roles.",
+  "version": "0.3.0",
+  "description": "Shared MCP discussions and supervised handoffs for Codex and Grok agents.",
   "author": {
     "name": "1ststep.ai",
     "url": "https://1ststep.ai"
@@ -13,13 +13,14 @@
   "skills": "./skills/",
   "interface": {
     "displayName": "Agent Handoff Bridge",
-    "shortDescription": "Run six supervised STP roles from one auditable queue.",
-    "longDescription": "Run the STP General Manager, Engineering, QA/Release, Content, Ops, and Growth roles directly in Codex, with optional MCP handoffs to other AI workers and owner-controlled approvals.",
+    "shortDescription": "Keep Codex and Grok roles in one auditable shared room.",
+    "longDescription": "Let Codex and Grok participants read and comment on the same identity-labeled discussion topics, while retaining the supervised task queue and owner-controlled approvals.",
     "developerName": "1ststep.ai",
     "category": "Productivity",
     "capabilities": ["Interactive", "Write"],
     "websiteURL": "https://github.com/1ststepai/agent-handoff-bridge",
     "defaultPrompt": [
+      "Use stp-team-room to read the current shared topic before commenting.",
       "Use stp-team to inspect the current queue and select one eligible task.",
       "Use stp-engineering to complete the next ready engineering task and stop at a draft PR.",
       "Use stp-qa-release to verify the current release candidate without merging or deploying."

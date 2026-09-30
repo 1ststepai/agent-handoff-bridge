@@ -38,3 +38,31 @@ test("agent handoffs require owner approval and keep an audit trail", () => {
     rmSync(directory, { recursive: true, force: true });
   }
 });
+
+test("shared topics preserve provider identity, role labels, replies, and cursors", () => {
+  const directory = mkdtempSync(join(tmpdir(), "agent-room-"));
+  const bridge = new Bridge(join(directory, "bridge.sqlite"));
+  try {
+    const topic = bridge.openTopic("owner", "Review the launch plan");
+    const codex = bridge.postComment("codex", topic.id, "Engineering evidence is ready.", "engineering");
+    const grok = bridge.postComment("growth", topic.id, "Growth needs a cohort baseline.", undefined, codex.id);
+
+    assert.deepEqual(
+      bridge.getTopic(topic.id).comments.map(({ actor, role, reply_to }) => ({ actor, role, reply_to })),
+      [
+        { actor: "codex", role: "engineering", reply_to: null },
+        { actor: "growth", role: "growth", reply_to: codex.id },
+      ],
+    );
+    assert.deepEqual(bridge.getTopic(topic.id, codex.id).comments.map(({ id }) => id), [grok.id]);
+    assert.throws(
+      () => bridge.postComment("growth", topic.id, "Pretend to be engineering", "engineering"),
+      /cannot post as another role/,
+    );
+    assert.equal(bridge.closeTopic(topic.id).status, "closed");
+    assert.throws(() => bridge.postComment("codex", topic.id, "Late comment"), /closed/);
+  } finally {
+    bridge.close();
+    rmSync(directory, { recursive: true, force: true });
+  }
+});

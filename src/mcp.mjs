@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/server";
 import { z } from "zod";
-import { AGENTS, AGENT_SET } from "./actors.mjs";
+import { AGENTS, AGENT_SET, TEAM_ROLES } from "./actors.mjs";
 
 const text = (value) => ({ content: [{ type: "text", text: JSON.stringify(value, null, 2) }] });
 const run = (operation) => {
@@ -13,9 +13,45 @@ const run = (operation) => {
 
 export function buildMcpServer(bridge, actor) {
   const server = new McpServer(
-    { name: "agent-handoff-bridge", version: "0.2.0" },
-    { instructions: `You are connected as ${actor}. Use this queue only for explicit task handoffs. Never put secrets in task text.` },
+    { name: "agent-handoff-bridge", version: "0.3.0" },
+    { instructions: `You are connected as ${actor}. For shared discussions, read the topic before posting and keep the returned cursor. Actor identity is authenticated; role is a label, not a different model. Never put secrets in tasks or comments.` },
   );
+
+  server.registerTool("list_topics", {
+    description: "List shared discussion topics visible to every authenticated bridge actor, newest first.",
+    inputSchema: z.object({
+      status: z.enum(["open", "closed"]).optional(),
+      limit: z.number().int().min(1).max(100).default(50),
+    }),
+    annotations: { readOnlyHint: true, openWorldHint: false },
+  }, ({ status, limit }) => run(() => bridge.listTopics(status, limit)));
+
+  server.registerTool("get_topic", {
+    description: "Read a shared topic and comments after an optional cursor. Call before commenting so you respond to current context.",
+    inputSchema: z.object({
+      topic_id: z.string().uuid(),
+      after_comment_id: z.number().int().min(0).default(0),
+      limit: z.number().int().min(1).max(200).default(100),
+    }),
+    annotations: { readOnlyHint: true, openWorldHint: false },
+  }, ({ topic_id, after_comment_id, limit }) => run(() => bridge.getTopic(topic_id, after_comment_id, limit)));
+
+  server.registerTool("open_topic", {
+    description: "Open a shared discussion topic for Grok and Codex participants. This does not authorize external actions.",
+    inputSchema: z.object({ title: z.string().min(1).max(160) }),
+    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
+  }, ({ title }) => run(() => bridge.openTopic(actor, title)));
+
+  server.registerTool("post_comment", {
+    description: "Append an immutable comment to an open topic. Codex or Dot may supply an STP role label; authenticated actor identity is always retained.",
+    inputSchema: z.object({
+      topic_id: z.string().uuid(),
+      body: z.string().min(1).max(8000),
+      role: z.enum(TEAM_ROLES).optional(),
+      reply_to: z.number().int().positive().optional(),
+    }),
+    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
+  }, ({ topic_id, body, role, reply_to }) => run(() => bridge.postComment(actor, topic_id, body, role, reply_to)));
 
   server.registerTool("list_tasks", {
     description: "List tasks visible to this actor, newest first.",
@@ -71,6 +107,12 @@ export function buildMcpServer(bridge, actor) {
       inputSchema: z.object({ task_id: z.string().uuid(), note: z.string().max(2000).optional() }),
       annotations: { readOnlyHint: false, destructiveHint: true },
     }, ({ task_id, note }) => run(() => bridge.cancelTask(task_id, note)));
+
+    server.registerTool("close_topic", {
+      description: "Close a shared topic so no further comments can be added.",
+      inputSchema: z.object({ topic_id: z.string().uuid() }),
+      annotations: { readOnlyHint: false, destructiveHint: true, openWorldHint: false },
+    }, ({ topic_id }) => run(() => bridge.closeTopic(topic_id)));
   }
 
   return server;

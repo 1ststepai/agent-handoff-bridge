@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import { AGENT_SET, ASSIGNEES } from "./actors.mjs";
+import { AGENT_SET, ASSIGNEES, TEAM_ROLE_SET } from "./actors.mjs";
 
 const STATUSES = new Set([
   "pending_approval",
@@ -57,6 +57,25 @@ export class Bridge {
       );
       CREATE INDEX IF NOT EXISTS tasks_status_idx ON tasks(status, assigned_to, updated_at);
       CREATE INDEX IF NOT EXISTS events_task_idx ON events(task_id, id);
+      CREATE TABLE IF NOT EXISTS topics (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        created_by TEXT NOT NULL,
+        status TEXT NOT NULL CHECK (status IN ('open', 'closed')),
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS comments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        topic_id TEXT NOT NULL REFERENCES topics(id),
+        actor TEXT NOT NULL,
+        role TEXT NOT NULL,
+        body TEXT NOT NULL,
+        reply_to INTEGER REFERENCES comments(id),
+        created_at TEXT NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS topics_status_idx ON topics(status, updated_at);
+      CREATE INDEX IF NOT EXISTS comments_topic_idx ON comments(topic_id, id);
     `);
   }
 
@@ -170,5 +189,75 @@ export class Bridge {
     if (result.changes !== 1) throw new Error("Task not found or already final");
     this.addEvent(id, "owner", "cancelled", cancellationNote);
     return this.getTask("owner", id);
+  }
+
+  openTopic(actor, title) {
+    if (actor !== "owner" && !AGENT_SET.has(actor)) throw new Error("Unknown actor");
+    const id = randomUUID();
+    const timestamp = now();
+    this.db.prepare(`
+      INSERT INTO topics (id, title, created_by, status, created_at, updated_at)
+      VALUES (?, ?, ?, 'open', ?, ?)
+    `).run(id, assertText(title, "title", 160), actor, timestamp, timestamp);
+    return this.getTopic(id);
+  }
+
+  listTopics(status, limit = 50) {
+    if (status && !["open", "closed"].includes(status)) throw new Error("Invalid status");
+    const capped = Math.max(1, Math.min(Number(limit) || 50, 100));
+    return status
+      ? this.db.prepare("SELECT * FROM topics WHERE status = ? ORDER BY updated_at DESC LIMIT ?").all(status, capped)
+      : this.db.prepare("SELECT * FROM topics ORDER BY updated_at DESC LIMIT ?").all(capped);
+  }
+
+  getTopic(id, afterCommentId = 0, limit = 100) {
+    const topic = this.db.prepare("SELECT * FROM topics WHERE id = ?").get(id);
+    if (!topic) throw new Error("Topic not found");
+    const after = Math.max(0, Number(afterCommentId) || 0);
+    const capped = Math.max(1, Math.min(Number(limit) || 100, 200));
+    const comments = this.db.prepare(`
+      SELECT id, actor, role, body, reply_to, created_at
+      FROM comments WHERE topic_id = ? AND id > ? ORDER BY id LIMIT ?
+    `).all(id, after, capped);
+    return { ...topic, comments, next_cursor: comments.at(-1)?.id ?? after };
+  }
+
+  postComment(actor, topicId, body, role, replyTo = null) {
+    if (actor !== "owner" && !AGENT_SET.has(actor)) throw new Error("Unknown actor");
+    const topic = this.db.prepare("SELECT * FROM topics WHERE id = ?").get(topicId);
+    if (!topic) throw new Error("Topic not found");
+    if (topic.status !== "open") throw new Error("Topic is closed");
+
+    const resolvedRole = role || actor;
+    if (["codex", "dot"].includes(actor)) {
+      if (role && !TEAM_ROLE_SET.has(role)) throw new Error("Invalid team role");
+    } else if (resolvedRole !== actor) {
+      throw new Error("This actor cannot post as another role");
+    }
+
+    let reply = null;
+    if (replyTo != null) {
+      reply = Number(replyTo);
+      if (!Number.isInteger(reply) || reply < 1) throw new Error("reply_to must be a positive integer");
+      const parent = this.db.prepare("SELECT topic_id FROM comments WHERE id = ?").get(reply);
+      if (!parent || parent.topic_id !== topicId) throw new Error("Reply target is not in this topic");
+    }
+
+    const timestamp = now();
+    const result = this.db.prepare(`
+      INSERT INTO comments (topic_id, actor, role, body, reply_to, created_at)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(topicId, actor, resolvedRole, assertText(body, "body", 8000), reply, timestamp);
+    this.db.prepare("UPDATE topics SET updated_at = ? WHERE id = ?").run(timestamp, topicId);
+    return this.db.prepare(`
+      SELECT id, actor, role, body, reply_to, created_at FROM comments WHERE id = ?
+    `).get(result.lastInsertRowid);
+  }
+
+  closeTopic(id) {
+    const result = this.db.prepare("UPDATE topics SET status = 'closed', updated_at = ? WHERE id = ? AND status = 'open'")
+      .run(now(), id);
+    if (result.changes !== 1) throw new Error("Topic not found or already closed");
+    return this.getTopic(id);
   }
 }

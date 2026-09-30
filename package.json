@@ -1,8 +1,8 @@
 {
   "name": "agent-handoff-bridge",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
-  "description": "Supervised MCP handoffs and Codex-native STP team roles.",
+  "description": "Shared MCP discussions and supervised handoffs for Codex and Grok agents.",
   "license": "MIT",
   "repository": {
     "type": "git",

@@ -11,6 +11,8 @@ export const AGENTS = [
 
 export const AGENT_SET = new Set(AGENTS);
 export const ASSIGNEES = new Set([...AGENTS, "any"]);
+export const TEAM_ROLES = ["general-manager", "engineering", "qa-release", "content", "ops", "growth"];
+export const TEAM_ROLE_SET = new Set(TEAM_ROLES);
 
 export const TOKEN_ENV = {
   owner: "BRIDGE_OWNER_TOKEN",

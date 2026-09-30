@@ -81,7 +81,29 @@ test("owner and agent complete the real MCP journey", async () => {
     const ownerTools = (await owner.listTools()).tools.map(({ name }) => name);
     const codexTools = (await codex.listTools()).tools.map(({ name }) => name);
     assert(ownerTools.includes("approve_task"));
+    assert(ownerTools.includes("close_topic"));
     assert(!codexTools.includes("approve_task"));
+    assert(!codexTools.includes("close_topic"));
+
+    const topic = parsed(await owner.callTool({ name: "open_topic", arguments: { title: "Shared launch review" } }));
+    const codexComment = parsed(await codex.callTool({ name: "post_comment", arguments: {
+      topic_id: topic.id,
+      role: "engineering",
+      body: "The implementation is ready for QA.",
+    } }));
+    const shared = parsed(await growth.callTool({ name: "get_topic", arguments: { topic_id: topic.id } }));
+    assert.equal(shared.comments[0].actor, "codex");
+    assert.equal(shared.comments[0].role, "engineering");
+    const growthComment = parsed(await growth.callTool({ name: "post_comment", arguments: {
+      topic_id: topic.id,
+      body: "I will wait for the QA evidence.",
+      reply_to: codexComment.id,
+    } }));
+    const catchup = parsed(await codex.callTool({ name: "get_topic", arguments: {
+      topic_id: topic.id,
+      after_comment_id: codexComment.id,
+    } }));
+    assert.deepEqual(catchup.comments.map(({ id }) => id), [growthComment.id]);
 
     const task = parsed(await owner.callTool({ name: "submit_task", arguments: {
       title: "Test handoff",
