@@ -11,6 +11,11 @@ const { positionals, values } = parseArgs({
     message: { type: "string" },
     after: { type: "string" },
     status: { type: "string" },
+    role: { type: "string" },
+    summary: { type: "string" },
+    "next-action": { type: "string" },
+    blockers: { type: "string" },
+    artifacts: { type: "string" },
     "no-completion-approval": { type: "boolean" },
   },
 });
@@ -44,8 +49,18 @@ try {
     result = bridge.postComment("owner", taskId, values.message);
   } else if (command === "topic-close") {
     result = bridge.closeTopic(taskId);
+  } else if (command === "checkpoint-list") {
+    result = bridge.getRoleCheckpoints(values.role);
+  } else if (command === "checkpoint-save") {
+    result = bridge.saveRoleCheckpoint("owner", {
+      role: values.role,
+      summary: values.summary,
+      next_action: values["next-action"],
+      blockers: values.blockers,
+      artifacts: values.artifacts,
+    });
   } else {
-    throw new Error("Usage: create --to <actor> --title <text> --instructions <text> | list [--status <status>] | show <id> | approve <id> [--note <text>] | cancel <id> [--note <text>] | topic-open --title <text> | topic-list [--status open|closed] | topic-show <id> [--after <comment-id>] | topic-comment <id> --message <text> | topic-close <id>");
+    throw new Error("Usage: create --to <actor> --title <text> --instructions <text> | list [--status <status>] | show <id> | approve <id> [--note <text>] | cancel <id> [--note <text>] | topic-open --title <text> | topic-list [--status open|closed] | topic-show <id> [--after <comment-id>] | topic-comment <id> --message <text> | topic-close <id> | checkpoint-list --role <role> | checkpoint-save --role <role> --summary <text> --next-action <text> [--blockers <text>] [--artifacts <text>]");
   }
   console.log(JSON.stringify(result, null, 2));
 } catch (error) {

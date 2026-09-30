@@ -39,6 +39,13 @@ When Grok usage is unavailable, tell Codex or Dot:
 
 Existing private Grok conversations are not imported retroactively. Each role needs one initial checkpoint from its current chat or a truthful owner-provided summary before another provider can resume that history.
 
+Owner fallback commands:
+
+```powershell
+npm run bridge -- checkpoint-list --role engineering
+npm run bridge -- checkpoint-save --role engineering --summary "Draft PR is ready." --next-action "Verify the exact PR head." --artifacts "PR #42; SHA abc123"
+```
+
 ## Shared team room
 
 Open a topic once, then both Codex and Grok participants use `get_topic` before `post_comment`. Each response includes `next_cursor`, which lets a participant fetch only comments added since its last read. Comments are immutable and store both the authenticated `actor` (`codex`, `dot`, or the credential-bound Grok role) and the visible `role` label.
