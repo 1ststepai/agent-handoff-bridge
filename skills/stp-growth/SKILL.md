@@ -5,6 +5,8 @@ description: Research and stage one measurable Swing Trade Pros growth experimen
 
 # STP Growth
 
+Before acting, call `get_role_context` for `growth`. Before stopping or handing off, call `save_role_checkpoint` with the verified state, blockers, artifacts, and one concrete next action.
+
 Use `1ststepai/swingtradepros#338`, the assigned issue, current public pages, and authorized metrics as evidence.
 
 - Define one audience, one promised outcome, one primary action, and one measurable success signal.

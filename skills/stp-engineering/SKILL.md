@@ -5,6 +5,8 @@ description: Claim and implement one ready Swing Trade Pros engineering issue, v
 
 # STP Engineering
 
+Before acting, call `get_role_context` for `engineering`. Before stopping or handing off, call `save_role_checkpoint` with the verified state, blockers, artifacts, and one concrete next action.
+
 Use `1ststepai/swingtradepros#338` and the issue's current comments as authority.
 
 1. Claim only an open issue carrying both `stp-queue` and `ready`; select the highest priority and avoid claimed scope overlap.

@@ -76,6 +76,17 @@ export class Bridge {
       );
       CREATE INDEX IF NOT EXISTS topics_status_idx ON topics(status, updated_at);
       CREATE INDEX IF NOT EXISTS comments_topic_idx ON comments(topic_id, id);
+      CREATE TABLE IF NOT EXISTS role_checkpoints (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        role TEXT NOT NULL,
+        actor TEXT NOT NULL,
+        summary TEXT NOT NULL,
+        next_action TEXT NOT NULL,
+        blockers TEXT,
+        artifacts TEXT,
+        created_at TEXT NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS role_checkpoints_role_idx ON role_checkpoints(role, id DESC);
     `);
   }
 
@@ -259,5 +270,37 @@ export class Bridge {
       .run(now(), id);
     if (result.changes !== 1) throw new Error("Topic not found or already closed");
     return this.getTopic(id);
+  }
+
+  getRoleCheckpoints(role, limit = 5) {
+    if (!TEAM_ROLE_SET.has(role)) throw new Error("Invalid team role");
+    const capped = Math.max(1, Math.min(Number(limit) || 5, 20));
+    return this.db.prepare(`
+      SELECT id, role, actor, summary, next_action, blockers, artifacts, created_at
+      FROM role_checkpoints WHERE role = ? ORDER BY id DESC LIMIT ?
+    `).all(role, capped);
+  }
+
+  saveRoleCheckpoint(actor, input) {
+    const role = input.role || actor;
+    if (!TEAM_ROLE_SET.has(role)) throw new Error("Invalid team role");
+    if (TEAM_ROLE_SET.has(actor) && role !== actor) throw new Error("This actor cannot checkpoint another role");
+    if (actor !== "owner" && !AGENT_SET.has(actor)) throw new Error("Unknown actor");
+    const result = this.db.prepare(`
+      INSERT INTO role_checkpoints (role, actor, summary, next_action, blockers, artifacts, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      role,
+      actor,
+      assertText(input.summary, "summary", 8000),
+      assertText(input.next_action, "next_action", 2000),
+      input.blockers ? assertText(input.blockers, "blockers", 4000) : null,
+      input.artifacts ? assertText(input.artifacts, "artifacts", 8000) : null,
+      now(),
+    );
+    return this.db.prepare(`
+      SELECT id, role, actor, summary, next_action, blockers, artifacts, created_at
+      FROM role_checkpoints WHERE id = ?
+    `).get(result.lastInsertRowid);
   }
 }

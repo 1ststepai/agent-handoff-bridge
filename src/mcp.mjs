@@ -1,4 +1,5 @@
 import { McpServer } from "@modelcontextprotocol/server";
+import { readFileSync } from "node:fs";
 import { z } from "zod";
 import { AGENTS, AGENT_SET, TEAM_ROLES } from "./actors.mjs";
 
@@ -10,12 +11,40 @@ const run = (operation) => {
     return { content: [{ type: "text", text: error.message }], isError: true };
   }
 };
+const roleProfile = (role) => readFileSync(new URL(`../skills/stp-${role}/SKILL.md`, import.meta.url), "utf8")
+  .replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n/, "")
+  .trim();
 
 export function buildMcpServer(bridge, actor) {
   const server = new McpServer(
-    { name: "agent-handoff-bridge", version: "0.3.2" },
-    { instructions: `You are connected as ${actor}. For shared discussions, read the topic before posting and keep the returned cursor. Actor identity is authenticated; role is a label, not a different model. Never put secrets in tasks or comments.` },
+    { name: "agent-handoff-bridge", version: "0.4.0" },
+    { instructions: `You are connected as ${actor}. Before continuing an STP role, call get_role_context. Before ending meaningful work, call save_role_checkpoint with the next concrete action. For shared discussions, read the topic before posting and keep the returned cursor. Actor identity is authenticated; role is a label, not a different model. Never put secrets in tasks, comments, or checkpoints.` },
   );
+
+  server.registerTool("get_role_context", {
+    description: "Load a role's canonical operating profile and recent resumable checkpoints before acting as or emulating that role.",
+    inputSchema: z.object({
+      role: z.enum(TEAM_ROLES),
+      checkpoint_limit: z.number().int().min(1).max(20).default(5),
+    }),
+    annotations: { readOnlyHint: true, openWorldHint: false },
+  }, ({ role, checkpoint_limit }) => run(() => ({
+    role,
+    profile: roleProfile(role),
+    checkpoints: bridge.getRoleCheckpoints(role, checkpoint_limit),
+  })));
+
+  server.registerTool("save_role_checkpoint", {
+    description: "Append a resumable role checkpoint before handing work to another provider or ending meaningful work.",
+    inputSchema: z.object({
+      role: z.enum(TEAM_ROLES).optional(),
+      summary: z.string().min(1).max(8000),
+      next_action: z.string().min(1).max(2000),
+      blockers: z.string().min(1).max(4000).optional(),
+      artifacts: z.string().min(1).max(8000).optional(),
+    }),
+    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
+  }, (input) => run(() => bridge.saveRoleCheckpoint(actor, input)));
 
   server.registerTool("list_topics", {
     description: "List shared discussion topics visible to every authenticated bridge actor, newest first.",

@@ -5,6 +5,8 @@ description: Verify a Swing Trade Pros draft PR or fixed commit against its acce
 
 # STP QA / Release
 
+Before acting, call `get_role_context` for `qa-release`. Before stopping or handing off, call `save_role_checkpoint` with the verified state, blockers, artifacts, and one concrete next action.
+
 Verify the exact PR head SHA; do not review a moving target.
 
 - Read the linked queue issue, acceptance criteria, changed files, checks, and known unavailable evidence.

@@ -5,6 +5,8 @@ description: Prepare Swing Trade Pros copy, screenshots, and media packages from
 
 # STP Content
 
+Before acting, call `get_role_context` for `content`. Before stopping or handing off, call `save_role_checkpoint` with the verified state, blockers, artifacts, and one concrete next action.
+
 Read `1ststepai/swingtradepros#338`, the assigned queue issue, and the current live or Preview evidence before drafting.
 
 - Use Node AI and Professor Node branding; do not reuse Nova chick artwork.

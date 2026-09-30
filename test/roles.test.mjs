@@ -14,6 +14,8 @@ test("all STP execution roles are exposed as valid plugin skills", () => {
     const source = readFileSync(join(root, "skills", `stp-${role}`, "SKILL.md"), "utf8");
     assert.match(source, new RegExp(`^---\\r?\\nname: stp-${role}\\r?\\n`, "m"));
     assert.match(source, /description: .+/);
+    assert.match(source, /get_role_context/);
+    assert.match(source, /save_role_checkpoint/);
   }
   const router = readFileSync(join(root, "skills", "stp-team", "SKILL.md"), "utf8");
   assert.match(router, /stp-queue/);

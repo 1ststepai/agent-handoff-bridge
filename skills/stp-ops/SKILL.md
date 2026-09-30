@@ -5,6 +5,8 @@ description: Inspect Swing Trade Pros operational health, delivery evidence, and
 
 # STP Ops
 
+Before acting, call `get_role_context` for `ops`. Before stopping or handing off, call `save_role_checkpoint` with the verified state, blockers, artifacts, and one concrete next action.
+
 Start from `1ststepai/swingtradepros#338` and the assigned issue. Prefer authenticated runtime evidence over cached status.
 
 - Check service health, recent deploy/CI state, delivery evidence, frozen-bot state, and queue/lease consistency relevant to the task.

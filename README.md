@@ -25,6 +25,20 @@ Start with one prompt:
 
 The router reads GitHub issue `#338` and current `stp-queue` labels. It does not recreate private Grok conversation memory, run a background loop, or execute multiple roles concurrently.
 
+## Resume a Grok role in Codex or Dot
+
+Each role has one canonical operating profile plus an append-only checkpoint history. The authenticated provider is retained on every checkpoint, so a Grok checkpoint and a Codex takeover remain distinguishable.
+
+Use this standing instruction in every connected Grok Bot, Dot, and Codex role:
+
+> Before acting, call `get_role_context` for the requested role. Continue from the newest verified checkpoint and its `next_action`; re-check drift-prone evidence. Before stopping or handing off, call `save_role_checkpoint` with the verified state, blockers, artifacts, and exactly one concrete next action. Never put secrets in a checkpoint.
+
+When Grok usage is unavailable, tell Codex or Dot:
+
+> Emulate the STP Engineering role. Load `get_role_context` for `engineering`, continue from its latest checkpoint under the canonical profile, and save a new checkpoint before stopping.
+
+Existing private Grok conversations are not imported retroactively. Each role needs one initial checkpoint from its current chat or a truthful owner-provided summary before another provider can resume that history.
+
 ## Shared team room
 
 Open a topic once, then both Codex and Grok participants use `get_topic` before `post_comment`. Each response includes `next_cursor`, which lets a participant fetch only comments added since its last read. Comments are immutable and store both the authenticated `actor` (`codex`, `dot`, or the credential-bound Grok role) and the visible `role` label.

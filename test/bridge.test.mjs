@@ -66,3 +66,36 @@ test("shared topics preserve provider identity, role labels, replies, and cursor
     rmSync(directory, { recursive: true, force: true });
   }
 });
+
+test("role checkpoints are append-only, resumable, and preserve provider identity", () => {
+  const directory = mkdtempSync(join(tmpdir(), "agent-checkpoint-"));
+  const bridge = new Bridge(join(directory, "bridge.sqlite"));
+  try {
+    bridge.saveRoleCheckpoint("engineering", {
+      summary: "Draft PR opened and tests pass.",
+      next_action: "QA should verify the exact head SHA.",
+      artifacts: "PR #42, SHA abc123",
+    });
+    bridge.saveRoleCheckpoint("codex", {
+      role: "engineering",
+      summary: "Resumed during provider outage; no code changed.",
+      next_action: "Run the issue acceptance test.",
+      blockers: "Preview credentials unavailable.",
+    });
+
+    const checkpoints = bridge.getRoleCheckpoints("engineering");
+    assert.deepEqual(checkpoints.map(({ actor }) => actor), ["codex", "engineering"]);
+    assert.equal(checkpoints[0].next_action, "Run the issue acceptance test.");
+    assert.throws(
+      () => bridge.saveRoleCheckpoint("growth", {
+        role: "engineering",
+        summary: "Wrong role",
+        next_action: "None",
+      }),
+      /cannot checkpoint another role/,
+    );
+  } finally {
+    bridge.close();
+    rmSync(directory, { recursive: true, force: true });
+  }
+});

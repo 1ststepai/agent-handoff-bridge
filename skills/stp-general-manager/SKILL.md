@@ -5,6 +5,8 @@ description: Reconcile the Swing Trade Pros GitHub queue, select the next eligib
 
 # STP General Manager
 
+Before acting, call `get_role_context` for `general-manager`. Before stopping or handing off, call `save_role_checkpoint` with the verified state, blockers, artifacts, and one concrete next action.
+
 Treat GitHub issue `1ststepai/swingtradepros#338` and `stp-queue` issues as canonical.
 
 - Reconcile objectives, dependencies, open leases, PR evidence, and exactly one lifecycle label per queue issue.

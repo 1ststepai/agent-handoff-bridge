@@ -84,6 +84,20 @@ test("owner and agent complete the real MCP journey", async () => {
     assert(ownerTools.includes("close_topic"));
     assert(!codexTools.includes("approve_task"));
     assert(!codexTools.includes("close_topic"));
+    assert(codexTools.includes("get_role_context"));
+    assert(codexTools.includes("save_role_checkpoint"));
+
+    parsed(await growth.callTool({ name: "save_role_checkpoint", arguments: {
+      summary: "Experiment brief is staged.",
+      next_action: "Engineering should confirm instrumentation.",
+      artifacts: "Issue #42",
+    } }));
+    const growthContext = parsed(await codex.callTool({ name: "get_role_context", arguments: {
+      role: "growth",
+    } }));
+    assert.match(growthContext.profile, /STP Growth/);
+    assert.equal(growthContext.checkpoints[0].actor, "growth");
+    assert.equal(growthContext.checkpoints[0].next_action, "Engineering should confirm instrumentation.");
 
     const topic = parsed(await owner.callTool({ name: "open_topic", arguments: { title: "Shared launch review" } }));
     const codexComment = parsed(await codex.callTool({ name: "post_comment", arguments: {
