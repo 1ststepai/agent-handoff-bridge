@@ -1,8 +1,8 @@
 {
   "name": "agent-handoff-bridge",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
-  "description": "Supervised MCP task handoffs across Codex, OpenAI Dots, and Grok Bots.",
+  "description": "Supervised MCP handoffs and Codex-native STP team roles.",
   "license": "MIT",
   "repository": {
     "type": "git",

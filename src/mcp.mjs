@@ -13,7 +13,7 @@ const run = (operation) => {
 
 export function buildMcpServer(bridge, actor) {
   const server = new McpServer(
-    { name: "agent-handoff-bridge", version: "0.1.0" },
+    { name: "agent-handoff-bridge", version: "0.2.0" },
     { instructions: `You are connected as ${actor}. Use this queue only for explicit task handoffs. Never put secrets in task text.` },
   );
 

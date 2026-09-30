@@ -1,7 +1,7 @@
 {
   "name": "agent-handoff-bridge",
-  "version": "0.1.0",
-  "description": "Supervised MCP handoffs between Codex, OpenAI Dots, and role-specific Grok Bots.",
+  "version": "0.2.0",
+  "description": "Supervised MCP handoffs plus Codex-native STP team roles.",
   "author": {
     "name": "1ststep.ai",
     "url": "https://1ststep.ai"
@@ -13,16 +13,16 @@
   "skills": "./skills/",
   "interface": {
     "displayName": "Agent Handoff Bridge",
-    "shortDescription": "Supervised, auditable task handoffs across AI agents.",
-    "longDescription": "Connect Codex to a local Agent Handoff Bridge so multiple AI workers can claim approved tasks and return auditable results without bypassing owner controls.",
+    "shortDescription": "Run six supervised STP roles from one auditable queue.",
+    "longDescription": "Run the STP General Manager, Engineering, QA/Release, Content, Ops, and Growth roles directly in Codex, with optional MCP handoffs to other AI workers and owner-controlled approvals.",
     "developerName": "1ststep.ai",
     "category": "Productivity",
     "capabilities": ["Interactive", "Write"],
     "websiteURL": "https://github.com/1ststepai/agent-handoff-bridge",
     "defaultPrompt": [
-      "Show my approved bridge tasks.",
-      "Claim the next task assigned to Codex.",
-      "Report the result of my claimed task."
+      "Use stp-team to inspect the current queue and select one eligible task.",
+      "Use stp-engineering to complete the next ready engineering task and stop at a draft PR.",
+      "Use stp-qa-release to verify the current release candidate without merging or deploying."
     ]
   },
   "mcpServers": "./.mcp.json"

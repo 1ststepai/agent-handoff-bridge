@@ -1,8 +1,28 @@
 # Agent Handoff Bridge
 
-A small, self-hosted MCP queue and Codex plugin for supervised handoffs among Codex, an OpenAI Dot, and the six STP Grok Bots: General Manager, Engineering, QA/Release, Content, Ops, and Growth. It gives each worker a separate credential, atomic task claiming, owner approval before agent-created dispatches, completion approval, and an append-only audit history.
+A small, self-hosted MCP queue and Codex plugin for supervised handoffs among Codex, an OpenAI Dot, and six STP roles: General Manager, Engineering, QA/Release, Content, Ops, and Growth. The roles can run directly in Codex or through separate Grok Bots. The bridge gives each external worker a separate credential, atomic task claiming, owner approval before agent-created dispatches, completion approval, and an append-only audit history.
 
 It does not let either agent bypass its normal product permissions or approval rules.
+
+## Run the STP team in Codex
+
+The plugin includes seven Codex skills:
+
+| Skill | Purpose |
+|---|---|
+| `stp-team` | Read the canonical queue and select one eligible role/task |
+| `stp-general-manager` | Reconcile priorities, dependencies, ownership, and human gates |
+| `stp-engineering` | Claim and implement one ready engineering issue |
+| `stp-qa-release` | Verify a fixed PR/SHA and report release evidence |
+| `stp-content` | Prepare approved copy and media without publishing |
+| `stp-ops` | Inspect health, delivery, and operational blockers |
+| `stp-growth` | Research and stage measurable growth experiments |
+
+Start with one prompt:
+
+> Use `stp-team` to inspect the current STP queue and complete the next eligible task. Stop at merge, Production, spend, credentials, publishing, or customer communication gates.
+
+The router reads GitHub issue `#338` and current `stp-queue` labels. It does not recreate private Grok conversation memory, run a background loop, or execute multiple roles concurrently.
 
 ## Start locally
 
