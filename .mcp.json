@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "agent-handoff-bridge": {
+      "type": "http",
+      "url": "http://127.0.0.1:8787/mcp",
+      "bearer_token_env_var": "BRIDGE_CODEX_TOKEN"
+    }
+  }
+}

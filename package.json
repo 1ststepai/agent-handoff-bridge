@@ -1,0 +1,30 @@
+{
+  "name": "agent-handoff-bridge",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Supervised MCP task handoffs across Codex, OpenAI Dots, and Grok Bots.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/1ststepai/agent-handoff-bridge.git"
+  },
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "bridge": "node --env-file-if-exists=.env src/cli.mjs",
+    "setup": "node src/setup.mjs",
+    "start": "node --env-file-if-exists=.env src/server.mjs",
+    "test": "node --test",
+    "tokens": "node src/tokens.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/node": "2.1.0",
+    "@modelcontextprotocol/server": "2.2.0",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/client": "2.2.0"
+  }
+}

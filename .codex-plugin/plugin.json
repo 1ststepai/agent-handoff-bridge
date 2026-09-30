@@ -1,0 +1,29 @@
+{
+  "name": "agent-handoff-bridge",
+  "version": "0.1.0",
+  "description": "Supervised MCP handoffs between Codex, OpenAI Dots, and role-specific Grok Bots.",
+  "author": {
+    "name": "1ststep.ai",
+    "url": "https://1ststep.ai"
+  },
+  "homepage": "https://github.com/1ststepai/agent-handoff-bridge",
+  "repository": "https://github.com/1ststepai/agent-handoff-bridge",
+  "license": "MIT",
+  "keywords": ["agents", "mcp", "handoff", "codex", "grok"],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Agent Handoff Bridge",
+    "shortDescription": "Supervised, auditable task handoffs across AI agents.",
+    "longDescription": "Connect Codex to a local Agent Handoff Bridge so multiple AI workers can claim approved tasks and return auditable results without bypassing owner controls.",
+    "developerName": "1ststep.ai",
+    "category": "Productivity",
+    "capabilities": ["Interactive", "Write"],
+    "websiteURL": "https://github.com/1ststepai/agent-handoff-bridge",
+    "defaultPrompt": [
+      "Show my approved bridge tasks.",
+      "Claim the next task assigned to Codex.",
+      "Report the result of my claimed task."
+    ]
+  },
+  "mcpServers": "./.mcp.json"
+}
