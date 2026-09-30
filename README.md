@@ -74,8 +74,9 @@ Use the resulting HTTPS URL plus `/mcp`. A temporary tunnel URL changes when res
 ### Dot
 
 1. In ChatGPT workspace settings, enable developer mode and create a custom MCP app.
-2. Set its endpoint to `https://YOUR-TUNNEL/mcp`.
-3. Choose bearer/API-token authentication and use `BRIDGE_DOT_TOKEN` from `.env`.
+2. Set its endpoint to `https://YOUR-TUNNEL/mcp?access_token=BRIDGE_DOT_TOKEN`, replacing `BRIDGE_DOT_TOKEN` with its value from `.env`.
+
+Grok's web connector form currently has no separate bearer-token field. Treat this URL as a secret: do not paste it into chat, commit it, or share screenshots containing it.
 4. Scan the tools and keep write actions confirmation-gated.
 5. Add the approved app to the Dot if that capability is available in your workspace.
 

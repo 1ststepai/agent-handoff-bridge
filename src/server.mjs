@@ -49,12 +49,15 @@ const server = createServer(async (req, res) => {
     res.end(JSON.stringify({ error: "Not found" }));
     return;
   }
-  const actor = actorForHeader(req.headers.authorization, tokens);
+  const queryToken = url.searchParams.get("access_token");
+  const actor = actorForHeader(req.headers.authorization, tokens)
+    || actorForHeader(queryToken ? `Bearer ${queryToken}` : "", tokens);
   if (!actor) {
     res.writeHead(401, { "content-type": "application/json", "www-authenticate": "Bearer" });
     res.end(JSON.stringify({ error: "Unauthorized" }));
     return;
   }
+  req.headers.authorization ||= `Bearer ${queryToken}`;
   try {
     await mcp(req, res);
   } catch (error) {
