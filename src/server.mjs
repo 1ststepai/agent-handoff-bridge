@@ -58,6 +58,10 @@ const server = createServer(async (req, res) => {
     return;
   }
   req.headers.authorization ||= `Bearer ${queryToken}`;
+  const accept = req.headers.accept || "";
+  if (!accept.includes("application/json") || !accept.includes("text/event-stream")) {
+    req.headers.accept = "application/json, text/event-stream";
+  }
   try {
     await mcp(req, res);
   } catch (error) {

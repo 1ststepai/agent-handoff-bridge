@@ -13,7 +13,7 @@ const run = (operation) => {
 
 export function buildMcpServer(bridge, actor) {
   const server = new McpServer(
-    { name: "agent-handoff-bridge", version: "0.3.1" },
+    { name: "agent-handoff-bridge", version: "0.3.2" },
     { instructions: `You are connected as ${actor}. For shared discussions, read the topic before posting and keep the returned cursor. Actor identity is authenticated; role is a label, not a different model. Never put secrets in tasks or comments.` },
   );
 
