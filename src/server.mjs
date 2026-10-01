@@ -4,7 +4,7 @@ import { toNodeHandler } from "@modelcontextprotocol/node";
 import { createMcpHandler } from "@modelcontextprotocol/server";
 import { Bridge } from "./bridge.mjs";
 import { buildMcpServer } from "./mcp.mjs";
-import { TOKEN_ENV } from "./actors.mjs";
+import { BRIDGE_VERSION, TOKEN_ENV } from "./actors.mjs";
 
 function loadTokens(env) {
   const entries = Object.entries(TOKEN_ENV).map(([actor, variable]) => [actor, env[variable], variable]);
@@ -40,8 +40,14 @@ const port = Number(process.env.BRIDGE_PORT || 8787);
 const server = createServer(async (req, res) => {
   const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
   if (req.method === "GET" && url.pathname === "/health") {
-    res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" });
-    res.end(JSON.stringify({ ok: true, service: "agent-handoff-bridge" }));
+    try {
+      const status = bridge.health();
+      res.writeHead(200, { "content-type": "application/json", "cache-control": "no-store" });
+      res.end(JSON.stringify({ ok: true, service: "agent-handoff-bridge", version: BRIDGE_VERSION, checkedAt: new Date().toISOString(), ...status }));
+    } catch {
+      res.writeHead(503, { "content-type": "application/json", "cache-control": "no-store" });
+      res.end(JSON.stringify({ ok: false, service: "agent-handoff-bridge", version: BRIDGE_VERSION, checkedAt: new Date().toISOString(), database: false }));
+    }
     return;
   }
   if (url.pathname !== "/mcp") {

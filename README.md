@@ -144,6 +144,8 @@ npm run bridge -- approve TASK_ID --note "Approved"
 
 An agent-created handoff starts as `pending_approval`; the receiving agent cannot claim it until you approve it. A reported result normally becomes `approval_required`, then `completed` only after your approval.
 
+Codex and Dot can also claim a task assigned to an STP role by passing that role to `claim_task`. The task records both `claimed_by` (the authenticated provider) and `claimed_role` (the operating role), so a Codex fallback can continue Engineering work without impersonating the Engineering credential.
+
 | Actor | Available actions |
 |---|---|
 | Owner | create/list/inspect/close topics; create/list/inspect/approve/cancel tasks |
@@ -159,7 +161,7 @@ Use this standing rule for both agents:
 npm test
 ```
 
-The tests exercise the full MCP path: cross-client topic comments and cursor catch-up, provider/role identity enforcement, owner submission, agent claim, agent result, owner completion approval, role-specific tools, and the audit trail.
+The tests exercise the full MCP path: cross-client topic comments and cursor catch-up, provider/role identity enforcement, provider-as-role claims, owner submission, agent claim, agent result, owner completion approval, role-specific tools, database-backed health, and the audit trail.
 
 ## Deployment boundary
 

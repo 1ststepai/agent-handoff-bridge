@@ -78,6 +78,11 @@ test("owner and agent complete the real MCP journey", async () => {
   const codex = await connect(`http://127.0.0.1:${port}/mcp`, tokens.codex, "codex-test");
   const growth = await connect(`http://127.0.0.1:${port}/mcp`, tokens.growth, "growth-test");
   try {
+    const health = await (await fetch(`http://127.0.0.1:${port}/health`)).json();
+    assert.equal(health.ok, true);
+    assert.equal(health.database, true);
+    assert.match(health.version, /^\d+\.\d+\.\d+$/);
+    assert.ok(!Number.isNaN(Date.parse(health.checkedAt)));
     const ownerTools = (await owner.listTools()).tools.map(({ name }) => name);
     const codexTools = (await codex.listTools()).tools.map(({ name }) => name);
     assert(ownerTools.includes("approve_task"));
@@ -132,6 +137,19 @@ test("owner and agent complete the real MCP journey", async () => {
       result: "Bounded result",
     } })).status, "approval_required");
     assert.equal(parsed(await owner.callTool({ name: "approve_task", arguments: { task_id: task.id } })).status, "completed");
+
+    const roleTask = parsed(await owner.callTool({ name: "submit_task", arguments: {
+      title: "Role handoff",
+      instructions: "Act as Engineering while retaining provider identity.",
+      assigned_to: "engineering",
+      requires_completion_approval: true,
+    } }));
+    const roleClaim = parsed(await codex.callTool({ name: "claim_task", arguments: {
+      task_id: roleTask.id,
+      role: "engineering",
+    } }));
+    assert.equal(roleClaim.claimed_by, "codex");
+    assert.equal(roleClaim.claimed_role, "engineering");
   } finally {
     await owner.close();
     await codex.close();

@@ -1,7 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/server";
 import { readFileSync } from "node:fs";
 import { z } from "zod";
-import { AGENTS, AGENT_SET, TEAM_ROLES } from "./actors.mjs";
+import { AGENTS, AGENT_SET, BRIDGE_VERSION, TEAM_ROLES } from "./actors.mjs";
 
 const text = (value) => ({ content: [{ type: "text", text: JSON.stringify(value, null, 2) }] });
 const run = (operation) => {
@@ -17,7 +17,7 @@ const roleProfile = (role) => readFileSync(new URL(`../skills/stp-${role}/SKILL.
 
 export function buildMcpServer(bridge, actor) {
   const server = new McpServer(
-    { name: "agent-handoff-bridge", version: "0.4.0" },
+    { name: "agent-handoff-bridge", version: BRIDGE_VERSION },
     { instructions: `You are connected as ${actor}. Before continuing an STP role, call get_role_context. Before ending meaningful work, call save_role_checkpoint with the next concrete action. For shared discussions, read the topic before posting and keep the returned cursor. Actor identity is authenticated; role is a label, not a different model. Never put secrets in tasks, comments, or checkpoints.` },
   );
 
@@ -112,10 +112,13 @@ export function buildMcpServer(bridge, actor) {
 
   if (AGENT_SET.has(actor)) {
     server.registerTool("claim_task", {
-      description: "Atomically claim an approved queued task assigned to this agent or any agent.",
-      inputSchema: z.object({ task_id: z.string().uuid() }),
+      description: "Atomically claim an approved queued task. Codex or Dot may explicitly act as its assigned STP role while retaining authenticated provider identity.",
+      inputSchema: z.object({
+        task_id: z.string().uuid(),
+        role: z.enum(TEAM_ROLES).optional(),
+      }),
       annotations: { readOnlyHint: false, destructiveHint: false },
-    }, ({ task_id }) => run(() => bridge.claimTask(actor, task_id)));
+    }, ({ task_id, role }) => run(() => bridge.claimTask(actor, task_id, role)));
 
     server.registerTool("report_result", {
       description: "Report the result for a task claimed by this agent. Completion may wait for owner approval.",

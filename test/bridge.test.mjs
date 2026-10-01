@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { DatabaseSync } from "node:sqlite";
 import test from "node:test";
 import { Bridge } from "../src/bridge.mjs";
 
@@ -33,6 +34,48 @@ test("agent handoffs require owner approval and keep an audit trail", () => {
       "result_reported",
       "completion_approved",
     ]);
+  } finally {
+    bridge.close();
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test("Codex can claim a role-assigned task without losing provider identity", () => {
+  const directory = mkdtempSync(join(tmpdir(), "agent-role-claim-"));
+  const bridge = new Bridge(join(directory, "bridge.sqlite"));
+  try {
+    const task = bridge.submitTask("owner", {
+      title: "Implement the approved change",
+      instructions: "Work as Engineering and stop before deployment.",
+      assigned_to: "engineering",
+      requires_completion_approval: true,
+    });
+    assert.equal(bridge.listTasks("codex")[0].id, task.id);
+    const claimed = bridge.claimTask("codex", task.id, "engineering");
+    assert.equal(claimed.claimed_by, "codex");
+    assert.equal(claimed.claimed_role, "engineering");
+    assert.equal(claimed.events.at(-1).details, "role=engineering");
+    assert.throws(() => bridge.claimTask("growth", task.id, "engineering"), /Only Codex or Dot/);
+  } finally {
+    bridge.close();
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test("existing databases gain the claimed role column", () => {
+  const directory = mkdtempSync(join(tmpdir(), "agent-migration-"));
+  const path = join(directory, "bridge.sqlite");
+  const legacy = new DatabaseSync(path);
+  legacy.exec(`CREATE TABLE tasks (
+    id TEXT PRIMARY KEY, title TEXT NOT NULL, instructions TEXT NOT NULL,
+    created_by TEXT NOT NULL, assigned_to TEXT NOT NULL, claimed_by TEXT,
+    status TEXT NOT NULL, requires_completion_approval INTEGER NOT NULL,
+    result TEXT, approval_note TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+  )`);
+  legacy.close();
+  const bridge = new Bridge(path);
+  try {
+    assert(bridge.db.prepare("PRAGMA table_info(tasks)").all().some(({ name }) => name === "claimed_role"));
   } finally {
     bridge.close();
     rmSync(directory, { recursive: true, force: true });

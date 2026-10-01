@@ -9,6 +9,8 @@ export const AGENTS = [
   "growth",
 ];
 
+export const BRIDGE_VERSION = "0.5.0";
+
 export const AGENT_SET = new Set(AGENTS);
 export const ASSIGNEES = new Set([...AGENTS, "any"]);
 export const TEAM_ROLES = ["general-manager", "engineering", "qa-release", "content", "ops", "growth"];

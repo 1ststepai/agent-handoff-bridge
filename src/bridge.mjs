@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import { AGENT_SET, ASSIGNEES, TEAM_ROLE_SET } from "./actors.mjs";
+import { AGENT_SET, ASSIGNEES, TEAM_ROLES, TEAM_ROLE_SET } from "./actors.mjs";
 
 const STATUSES = new Set([
   "pending_approval",
@@ -40,6 +40,7 @@ export class Bridge {
         created_by TEXT NOT NULL,
         assigned_to TEXT NOT NULL,
         claimed_by TEXT,
+        claimed_role TEXT,
         status TEXT NOT NULL CHECK (status IN ('pending_approval', 'queued', 'claimed', 'approval_required', 'completed', 'cancelled')),
         requires_completion_approval INTEGER NOT NULL CHECK (requires_completion_approval IN (0, 1)),
         result TEXT,
@@ -88,10 +89,18 @@ export class Bridge {
       );
       CREATE INDEX IF NOT EXISTS role_checkpoints_role_idx ON role_checkpoints(role, id DESC);
     `);
+    const taskColumns = this.db.prepare("PRAGMA table_info(tasks)").all();
+    if (!taskColumns.some(({ name }) => name === "claimed_role")) {
+      this.db.exec("ALTER TABLE tasks ADD COLUMN claimed_role TEXT");
+    }
   }
 
   close() {
     this.db.close();
+  }
+
+  health() {
+    return { database: this.db.prepare("SELECT 1 AS ok").get().ok === 1 };
   }
 
   addEvent(taskId, actor, action, details = null) {
@@ -101,7 +110,11 @@ export class Bridge {
   }
 
   canSee(actor, task) {
-    return actor === "owner" || task.created_by === actor || task.assigned_to === actor || task.assigned_to === "any";
+    return actor === "owner"
+      || task.created_by === actor
+      || task.assigned_to === actor
+      || task.assigned_to === "any"
+      || (["codex", "dot"].includes(actor) && TEAM_ROLE_SET.has(task.assigned_to));
   }
 
   getTask(actor, id) {
@@ -118,7 +131,10 @@ export class Bridge {
     const capped = Math.max(1, Math.min(Number(limit) || 50, 100));
     const filters = [];
     const params = [];
-    if (actor !== "owner") {
+    if (["codex", "dot"].includes(actor)) {
+      filters.push(`(created_by = ? OR assigned_to = ? OR assigned_to = 'any' OR assigned_to IN (${TEAM_ROLES.map(() => "?").join(", ")}))`);
+      params.push(actor, actor, ...TEAM_ROLES);
+    } else if (actor !== "owner") {
       filters.push("(created_by = ? OR assigned_to = ? OR assigned_to = 'any')");
       params.push(actor, actor);
     }
@@ -152,15 +168,18 @@ export class Bridge {
     return this.getTask(actor, id);
   }
 
-  claimTask(actor, id) {
+  claimTask(actor, id, role = null) {
     if (!AGENT_SET.has(actor)) throw new Error("Only configured agents can claim a task");
+    if (role && !["codex", "dot"].includes(actor)) throw new Error("Only Codex or Dot can act as another role");
+    if (role && !TEAM_ROLE_SET.has(role)) throw new Error("Invalid team role");
+    const claimedRole = role || actor;
     const timestamp = now();
     const result = this.db.prepare(`
-      UPDATE tasks SET status = 'claimed', claimed_by = ?, updated_at = ?
-      WHERE id = ? AND status = 'queued' AND assigned_to IN (?, 'any')
-    `).run(actor, timestamp, id, actor);
+      UPDATE tasks SET status = 'claimed', claimed_by = ?, claimed_role = ?, updated_at = ?
+      WHERE id = ? AND status = 'queued' AND assigned_to IN (?, ?, 'any')
+    `).run(actor, claimedRole, timestamp, id, actor, claimedRole);
     if (result.changes !== 1) throw new Error("Task is unavailable, unapproved, or assigned to another agent");
-    this.addEvent(id, actor, "claimed");
+    this.addEvent(id, actor, "claimed", claimedRole === actor ? null : `role=${claimedRole}`);
     return this.getTask(actor, id);
   }
 
